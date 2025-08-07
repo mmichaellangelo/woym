@@ -1,0 +1,77 @@
+services:
+  web:
+    container_name: web
+    build:
+      context: frontend
+      target: dev
+    volumes:
+      - ./frontend:/app
+    env_file: ./frontend/.env
+    environment:
+      - VIRTUAL_HOST=woym.localhost
+    networks:
+      - woym
+    restart: unless-stopped
+    expose: 
+      - "5173"
+  api:
+    container_name: api
+    build:
+      context: backend
+      target: dev
+    volumes:
+      - ./backend:/app
+    env_file: ./backend/.env
+    environment:
+      - VIRTUAL_HOST=api.woym.localhost
+    networks:
+      - woym
+    restart: unless-stopped
+    expose: 
+      - "8080"
+  db:
+    container_name: db
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: mike
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: db
+      VIRTUAL_HOST: db.woym.localhost
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - woym
+    restart: unless-stopped
+    expose: 
+      - "5432"
+  adminer:
+    image: adminer:latest
+    container_name: adminer
+    environment:
+      VIRTUAL_HOST: adminer.woym.localhost
+    networks:
+      - woym
+    restart: unless-stopped
+    expose: 
+      - "8080"
+  proxy:
+    image: jwilder/nginx-proxy:latest
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    networks:
+      - woym
+    depends_on:
+      - web
+      - api
+      - db
+      - adminer
+    ports:
+      - "80:80"
+    
+volumes:
+  postgres_data:
+
+networks:
+  woym:
+    driver: bridge
